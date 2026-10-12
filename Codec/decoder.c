@@ -13036,7 +13036,7 @@ void ReconstructWaveletBand(DECODER *decoder, TRANSFORM *transform, int channel,
 			}
 
 			// Has this wavelet already been reconstructed?
-			if ((lowpass->band_valid_flags & BAND_VALID_MASK(0)) == 0)
+			if (!WaveletBandValidThreadSafe(decoder, lowpass, 0))
 			{
 				// Perform the inverse spatial transform before decoding the next wavelet
 				STOP(tk_decoding);
@@ -23319,7 +23319,9 @@ IMAGE *GetWaveletThreadSafe(DECODER *decoder, TRANSFORM *transform, int index,
 		wavelet = ReallocWaveletEx(wavelet, width, height, level, type);
 #endif
 		// Save this wavelet in the transform data structure
-		transform->wavelet[index] = wavelet;
+		if (transform->wavelet[index] != wavelet) {
+			transform->wavelet[index] = wavelet;
+		}
 
 		// Unlock access to the wavelet data
 #if _DELAYED_THREAD_START==0
@@ -24131,6 +24133,25 @@ void UpdateWaveletBandStartedFlags(DECODER *decoder, IMAGE *wavelet, int band)
 			Unlock(&decoder->entropy_worker_new.lock);
 #endif
 	}
+}
+
+// Test a wavelet band's valid flag under the lock the threads take to set it
+bool WaveletBandValidThreadSafe(DECODER *decoder, IMAGE *wavelet, int band)
+{
+	bool valid;
+
+#if _THREADED_DECODER
+	if (decoder->entropy_worker_new.pool.thread_count) {
+		Lock(&decoder->entropy_worker_new.lock);
+	}
+#endif
+	valid = (wavelet->band_valid_flags & BAND_VALID_MASK(band)) != 0;
+#if _THREADED_DECODER
+	if (decoder->entropy_worker_new.pool.thread_count) {
+		Unlock(&decoder->entropy_worker_new.lock);
+	}
+#endif
+	return valid;
 }
 
 bool DecodedBandsValid(IMAGE *wavelet, int index, int transform_type)
