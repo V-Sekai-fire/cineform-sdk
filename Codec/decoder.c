@@ -12383,8 +12383,8 @@ bool DecodeSampleLowPassBand(DECODER *decoder, BITSTREAM *stream, IMAGE *wavelet
 						else
 							pixels = solid_color;
 						pixel_value = (pixels>>16);
-						pixels <<= 16;
-						pixels >>= 16;
+						// Keep the low 16 bits, sign-extended
+						pixels = (int16_t)pixels;
 					}
 
 
@@ -19613,7 +19613,7 @@ bool DecodeBandFSM16sNoGap(FSM *fsm, BITSTREAM *stream, PIXEL16S *image, int wid
 		rowptr = &rowptr[entryfast->pre_post_skip & 0x1ff];
 
 		// Write down the first decoded magnitude
-		*((uint32_t *)rowptr) = entryfast->values;
+		memcpy(rowptr, &entryfast->values, sizeof(uint32_t));
 
 		// Skip the appropriate distance
 		rowptr = &rowptr[(entryfast->pre_post_skip >> 12) & 0x7];
@@ -19635,7 +19635,7 @@ bool DecodeBandFSM16sNoGap(FSM *fsm, BITSTREAM *stream, PIXEL16S *image, int wid
 		rowptr = &rowptr[entryfast->pre_post_skip & 0x1ff];
 
 		// Write down the first decoded magnitude
-		*((uint32_t *)rowptr) = entryfast->values;
+		memcpy(rowptr, &entryfast->values, sizeof(uint32_t));
 
 		// Skip the decoded zero runs
 		rowptr = &rowptr[(entryfast->pre_post_skip >> 12) & 0x7];
@@ -20601,9 +20601,9 @@ void DeQuantFSM(FSM *fsm, int quant)
 		for (j = 0; j < (1 << FSM_INDEX_SIZE); j++)
 		{
 			if(entry[j].value0 < 0x7ff0) // band end trailer
-				entry[j].value0 *= quant;
+				entry[j].value0 = (short)(entry[j].value0 * quant);
 
-			entry[j].value1 *= quant;
+			entry[j].value1 = (short)(entry[j].value1 * quant);
 		}
 	}
 #else
@@ -20614,9 +20614,9 @@ void DeQuantFSM(FSM *fsm, int quant)
 		if(entry)
 		{
 			if(entry->value0 < 0x7ff0) // band end trailer etc
-				entry->value0 *= quant;
+				entry->value0 = (short)(entry->value0 * quant);
 
-			entry->value1 *= quant;
+			entry->value1 = (short)(entry->value1 * quant);
 		}
 	}
 #endif
@@ -20764,7 +20764,7 @@ bool DecodeFastRunsFSM16s(DECODER *decoder, BITSTREAM *stream, IMAGE *wavelet,
 					value |= *(stream->lpCurrentWord-5);
 
 					tag |= *(stream->lpCurrentWord-7);
-					tag = NEG(tag);
+					tag = (unsigned short)NEG(tag);
 
 					chunksize = value;
 					chunksize &= 0xffff;
