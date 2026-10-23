@@ -7832,7 +7832,7 @@ void EncodeQuantizedGroup(ENCODER *encoder, TRANSFORM *transform[], int num_tran
 			}
 	#endif
 			// Write the number of bytes used to code this channel in the channel size table
-			channel_size_vector[channel] = (DWORD)ReverseByteOrder(channel_size_in_byte);
+			channel_size_vector[channel] = (uint32_t)ReverseByteOrder(channel_size_in_byte);
 
 			// Start numbering the subbands in the next channel beginning with zero
 			subband = 0;
