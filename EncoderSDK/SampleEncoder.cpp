@@ -159,6 +159,8 @@ CSampleEncoder::PrepareToEncode(int inputWidth,
 			error = CFHD_ERROR_OUTOFMEMORY;
 			goto bail;
 		}
+		// Alloc does not zero, and AllocTransform reads fields before setting them.
+		memset(m_encoder, 0, sizeof(ENCODER));
 
 #ifndef _WIN32
 		// Check the features against the image size
@@ -194,6 +196,7 @@ CSampleEncoder::PrepareToEncode(int inputWidth,
 					error = CFHD_ERROR_OUTOFMEMORY;
 					goto bail;
 				}
+				memset(m_transformArray[channel], 0, sizeof(TRANSFORM));
 				InitTransform(m_transformArray[channel]);
 			}
 		}
